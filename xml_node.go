@@ -5,6 +5,6 @@ import (
 )
 
 type XmlNode interface {
-	LoadXml(resolver XmlResolver, el *etree.Element) error
-	GetXml(resolver XmlResolver) (*etree.Element, error)
+	LoadXml(resolver XmlContext, el *etree.Element) error
+	GetXml(resolver XmlContext) (*etree.Element, error)
 }

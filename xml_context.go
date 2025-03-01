@@ -10,9 +10,9 @@ var (
 	ErrNoTypeConstructor = errors.New("no type constructor")
 )
 
-type XmlTypeConstructor func(resolver XmlResolver) (XmlNode, error)
+type XmlTypeConstructor func(resolver XmlContext) (XmlNode, error)
 
-type XmlResolver interface {
+type XmlContext interface {
 	GetDocument() *etree.Document
 	SetNamespacePrefix(prefix string, uri string)
 	GetNamespacePrefix(uri string) string
@@ -21,7 +21,7 @@ type XmlResolver interface {
 	GetTypeConstructor(uri string, tag string) (XmlTypeConstructor, error)
 }
 
-type xmlResolver struct {
+type xmlContext struct {
 	doc              *etree.Document
 	uris             map[string]string
 	prefixes         map[string]string
@@ -34,8 +34,8 @@ type xmlTypeEntry struct {
 	constructor XmlTypeConstructor
 }
 
-func NewXmlResolver(doc *etree.Document) XmlResolver {
-	return &xmlResolver{
+func NewXmlContext(doc *etree.Document) XmlContext {
+	return &xmlContext{
 		doc:              doc,
 		uris:             make(map[string]string),
 		prefixes:         make(map[string]string),
@@ -43,16 +43,16 @@ func NewXmlResolver(doc *etree.Document) XmlResolver {
 	}
 }
 
-func (resolver *xmlResolver) GetDocument() *etree.Document {
+func (resolver *xmlContext) GetDocument() *etree.Document {
 	return resolver.doc
 }
 
-func (resolver *xmlResolver) SetNamespacePrefix(prefix string, uri string) {
+func (resolver *xmlContext) SetNamespacePrefix(prefix string, uri string) {
 	resolver.prefixes[uri] = prefix
 	resolver.uris[prefix] = uri
 }
 
-func (resolver *xmlResolver) GetNamespacePrefix(uri string) string {
+func (resolver *xmlContext) GetNamespacePrefix(uri string) string {
 	prefix, found := resolver.prefixes[uri]
 	if !found {
 		return uri
@@ -60,7 +60,7 @@ func (resolver *xmlResolver) GetNamespacePrefix(uri string) string {
 	return prefix
 }
 
-func (resolver *xmlResolver) GetNamespaceUri(prefix string) string {
+func (resolver *xmlContext) GetNamespaceUri(prefix string) string {
 	namespaceUri, found := resolver.uris[prefix]
 	if !found {
 		return prefix
@@ -68,7 +68,7 @@ func (resolver *xmlResolver) GetNamespaceUri(prefix string) string {
 	return namespaceUri
 }
 
-func (resolver *xmlResolver) RegisterTypeConstructor(uri string, tag string, ctor XmlTypeConstructor) {
+func (resolver *xmlContext) RegisterTypeConstructor(uri string, tag string, ctor XmlTypeConstructor) {
 	entry, ok := resolver.getTypeConstructor(uri, tag)
 	if !ok {
 		entry = &xmlTypeEntry{
@@ -80,7 +80,7 @@ func (resolver *xmlResolver) RegisterTypeConstructor(uri string, tag string, cto
 	entry.constructor = ctor
 }
 
-func (resolver *xmlResolver) GetTypeConstructor(uri string, tag string) (XmlTypeConstructor, error) {
+func (resolver *xmlContext) GetTypeConstructor(uri string, tag string) (XmlTypeConstructor, error) {
 	entry, ok := resolver.getTypeConstructor(uri, tag)
 	if !ok {
 		return nil, ErrNoTypeConstructor
@@ -88,7 +88,7 @@ func (resolver *xmlResolver) GetTypeConstructor(uri string, tag string) (XmlType
 	return entry.constructor, nil
 }
 
-func (resolver *xmlResolver) getTypeConstructor(uri string, tag string) (*xmlTypeEntry, bool) {
+func (resolver *xmlContext) getTypeConstructor(uri string, tag string) (*xmlTypeEntry, bool) {
 	for _, entry := range resolver.typeConstructors {
 		if entry.uri == uri && entry.tag == tag {
 			return entry, true
