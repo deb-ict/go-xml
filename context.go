@@ -10,9 +10,9 @@ var (
 	ErrNoTypeConstructor = errors.New("no type constructor")
 )
 
-type XmlTypeConstructor func(resolver XmlContext) (XmlNode, error)
+type XmlTypeConstructor func(ctx Context) (Node, error)
 
-type XmlContext interface {
+type Context interface {
 	GetDocument() *etree.Document
 	SetNamespacePrefix(prefix string, uri string)
 	GetNamespacePrefix(uri string) string
@@ -21,7 +21,7 @@ type XmlContext interface {
 	GetTypeConstructor(uri string, tag string) (XmlTypeConstructor, error)
 }
 
-type xmlContext struct {
+type context struct {
 	doc              *etree.Document
 	uris             map[string]string
 	prefixes         map[string]string
@@ -34,8 +34,8 @@ type xmlTypeEntry struct {
 	constructor XmlTypeConstructor
 }
 
-func NewXmlContext(doc *etree.Document) XmlContext {
-	return &xmlContext{
+func NewContext(doc *etree.Document) Context {
+	return &context{
 		doc:              doc,
 		uris:             make(map[string]string),
 		prefixes:         make(map[string]string),
@@ -43,53 +43,53 @@ func NewXmlContext(doc *etree.Document) XmlContext {
 	}
 }
 
-func (resolver *xmlContext) GetDocument() *etree.Document {
-	return resolver.doc
+func (ctx *context) GetDocument() *etree.Document {
+	return ctx.doc
 }
 
-func (resolver *xmlContext) SetNamespacePrefix(prefix string, uri string) {
-	resolver.prefixes[uri] = prefix
-	resolver.uris[prefix] = uri
+func (ctx *context) SetNamespacePrefix(prefix string, uri string) {
+	ctx.prefixes[uri] = prefix
+	ctx.uris[prefix] = uri
 }
 
-func (resolver *xmlContext) GetNamespacePrefix(uri string) string {
-	prefix, found := resolver.prefixes[uri]
+func (ctx *context) GetNamespacePrefix(uri string) string {
+	prefix, found := ctx.prefixes[uri]
 	if !found {
 		return uri
 	}
 	return prefix
 }
 
-func (resolver *xmlContext) GetNamespaceUri(prefix string) string {
-	namespaceUri, found := resolver.uris[prefix]
+func (ctx *context) GetNamespaceUri(prefix string) string {
+	namespaceUri, found := ctx.uris[prefix]
 	if !found {
 		return prefix
 	}
 	return namespaceUri
 }
 
-func (resolver *xmlContext) RegisterTypeConstructor(uri string, tag string, ctor XmlTypeConstructor) {
-	entry, ok := resolver.getTypeConstructor(uri, tag)
+func (ctx *context) RegisterTypeConstructor(uri string, tag string, ctor XmlTypeConstructor) {
+	entry, ok := ctx.getTypeConstructor(uri, tag)
 	if !ok {
 		entry = &xmlTypeEntry{
 			uri: uri,
 			tag: tag,
 		}
-		resolver.typeConstructors = append(resolver.typeConstructors, entry)
+		ctx.typeConstructors = append(ctx.typeConstructors, entry)
 	}
 	entry.constructor = ctor
 }
 
-func (resolver *xmlContext) GetTypeConstructor(uri string, tag string) (XmlTypeConstructor, error) {
-	entry, ok := resolver.getTypeConstructor(uri, tag)
+func (ctx *context) GetTypeConstructor(uri string, tag string) (XmlTypeConstructor, error) {
+	entry, ok := ctx.getTypeConstructor(uri, tag)
 	if !ok {
 		return nil, ErrNoTypeConstructor
 	}
 	return entry.constructor, nil
 }
 
-func (resolver *xmlContext) getTypeConstructor(uri string, tag string) (*xmlTypeEntry, bool) {
-	for _, entry := range resolver.typeConstructors {
+func (ctx *context) getTypeConstructor(uri string, tag string) (*xmlTypeEntry, bool) {
+	for _, entry := range ctx.typeConstructors {
 		if entry.uri == uri && entry.tag == tag {
 			return entry, true
 		}
