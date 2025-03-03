@@ -63,3 +63,16 @@ func TestTypeConstructor(t *testing.T) {
 		t.Error("ctor is nil")
 	}
 }
+
+func TestTypeConstructorNotFound(t *testing.T) {
+	doc := etree.NewDocument()
+	ctx := NewContext(doc)
+	ctor := func(ctx Context) (Node, error) {
+		return nil, nil
+	}
+	ctx.RegisterTypeConstructor("http://foo.com", "bar", ctor)
+	_, err := ctx.GetTypeConstructor("http://bar.com", "foo")
+	if err != ErrNoTypeConstructor {
+		t.Errorf("expected %v, got %v", ErrNoTypeConstructor, err)
+	}
+}
