@@ -3,6 +3,11 @@ permissions:
   contents: read
   pull-requests: write
 on:
+  push:
+    branches:
+      - main
+    tags:
+      - '*'
   pull_request:
     branches:
       - main
@@ -24,4 +29,10 @@ jobs:
           run: go build ./...
 
         - name: Test
-          run: go test -race -cover -coverprofile=coverage -covermode=atomic -v ./...
+          run: go test -json -race -cover -coverprofile=coverage -covermode=atomic -v ./... > report.json
+
+        - name: SonarCloud Scan
+          uses: SonarSource/sonarqube-scan-action@v5.0.0
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
