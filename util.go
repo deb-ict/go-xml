@@ -24,6 +24,9 @@ func ValidateElement(el *etree.Element, tag string, namespaceUri string) error {
 }
 
 func GetSingleChildElement(el *etree.Element, tag string, namespaceUri string) (*etree.Element, error) {
+	if namespaceUri != "" {
+		tag = tag + "[namespace-uri()='" + namespaceUri + "']"
+	}
 	elements := el.SelectElements(tag)
 	if len(elements) == 0 {
 		return nil, ErrChildElementNotFound
@@ -35,6 +38,9 @@ func GetSingleChildElement(el *etree.Element, tag string, namespaceUri string) (
 }
 
 func GetOptionalSingleChildElement(el *etree.Element, tag string, namespaceUri string) (*etree.Element, error) {
+	if namespaceUri != "" {
+		tag = tag + "[namespace-uri()='" + namespaceUri + "']"
+	}
 	elements := el.SelectElements(tag)
 	if len(elements) > 1 {
 		return nil, ErrMultipleChildElementsFound
