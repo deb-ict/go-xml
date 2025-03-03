@@ -29,7 +29,7 @@ jobs:
           run: go build ./...
 
         - name: Test
-          run: go test -json -race -cover -coverprofile=coverage -covermode=atomic -v ./... > report.json
+          run: go test -json -cover -coverprofile=coverage.out -covermode=atomic -v ./... > report.json
 
         - name: SonarCloud Scan
           uses: SonarSource/sonarqube-scan-action@v5.0.0
