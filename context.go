@@ -19,6 +19,7 @@ type Context interface {
 	GetNamespaceUri(prefix string) string
 	RegisterTypeConstructor(uri string, tag string, ctor XmlTypeConstructor)
 	GetTypeConstructor(uri string, tag string) (XmlTypeConstructor, error)
+	GetElementTypeConstructor(el *etree.Element) (XmlTypeConstructor, error)
 }
 
 type context struct {
@@ -86,6 +87,10 @@ func (ctx *context) GetTypeConstructor(uri string, tag string) (XmlTypeConstruct
 		return nil, ErrNoTypeConstructor
 	}
 	return entry.constructor, nil
+}
+
+func (ctx *context) GetElementTypeConstructor(el *etree.Element) (XmlTypeConstructor, error) {
+	return ctx.GetTypeConstructor(el.NamespaceURI(), el.Tag)
 }
 
 func (ctx *context) getTypeConstructor(uri string, tag string) (*xmlTypeEntry, bool) {
