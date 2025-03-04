@@ -6,6 +6,37 @@ import (
 	"github.com/beevik/etree"
 )
 
+func TestCreateElement(t *testing.T) {
+	testCases := []struct {
+		tag           string
+		namespaceUri  string
+		expectedSpace string
+		expectedError error
+	}{
+		{
+			tag:           "test",
+			namespaceUri:  "",
+			expectedSpace: "",
+			expectedError: nil,
+		},
+		{
+			tag:           "test",
+			namespaceUri:  "http://example.com",
+			expectedSpace: "foo",
+			expectedError: nil,
+		},
+	}
+
+	context := NewContext(etree.NewDocument())
+	context.SetNamespacePrefix("foo", "http://example.com")
+	for _, tc := range testCases {
+		el := CreateElement(context, tc.tag, tc.namespaceUri)
+		if el.Space != tc.expectedSpace {
+			t.Errorf("expected %v, got %v", tc.expectedSpace, el.Space)
+		}
+	}
+}
+
 func TestValidateElement(t *testing.T) {
 	testCases := []struct {
 		el            *etree.Element

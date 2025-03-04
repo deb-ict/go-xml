@@ -23,6 +23,13 @@ func ValidateElement(el *etree.Element, tag string, namespaceUri string) error {
 	return nil
 }
 
+func CreateElement(context Context, tag string, namespaceUri string) *etree.Element {
+	el := etree.NewElement(tag)
+	el.Space = context.GetNamespacePrefix(namespaceUri)
+
+	return el
+}
+
 func GetSingleChildElement(el *etree.Element, tag string, namespaceUri string) (*etree.Element, error) {
 	if namespaceUri != "" {
 		tag = tag + "[namespace-uri()='" + namespaceUri + "']"
