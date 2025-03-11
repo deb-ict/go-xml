@@ -25,7 +25,10 @@ func ValidateElement(el *etree.Element, tag string, namespaceUri string) error {
 
 func CreateElement(context Context, tag string, namespaceUri string) *etree.Element {
 	el := etree.NewElement(tag)
-	el.Space = context.GetNamespacePrefix(namespaceUri)
+	prefix, found := context.GetNamespacePrefix(namespaceUri)
+	if found && prefix != "" {
+		el.Space = prefix
+	}
 
 	return el
 }
@@ -56,4 +59,11 @@ func GetOptionalSingleChildElement(el *etree.Element, tag string, namespaceUri s
 		return elements[0], nil
 	}
 	return nil, nil
+}
+
+func GetMultipleChildElements(el *etree.Element, tag string, namespaceUri string) ([]*etree.Element, error) {
+	if namespaceUri != "" {
+		tag = tag + "[namespace-uri()='" + namespaceUri + "']"
+	}
+	return el.SelectElements(tag), nil
 }
