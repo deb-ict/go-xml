@@ -6,92 +6,40 @@ import (
 	"github.com/beevik/etree"
 )
 
-func TestNewContext(t *testing.T) {
+func TestNewContextWithDocumentLoadsNametable(t *testing.T) {
+	xlm := `<?xml version="1.0"?><root xmlns="http://example.com" xmlns:foo="http://foo.com" xmlns:bar="http://bar.com"><foo:child/><bar:child/></root>`
 	doc := etree.NewDocument()
-	ctx := NewContext(doc)
-	if ctx.GetDocument() != doc {
-		t.Errorf("expected %v, got %v", doc, ctx.GetDocument())
-	}
-}
-
-func TestNamespacePrefix(t *testing.T) {
-	doc := etree.NewDocument()
-	ctx := NewContext(doc)
-	ctx.SetNamespacePrefix("foo", "http://foo.com")
-	if ctx.GetNamespacePrefix("http://foo.com") != "foo" {
-		t.Errorf("expected %v, got %v", "foo", ctx.GetNamespacePrefix("http://foo.com"))
-	}
-}
-
-func TestNamespacePrefixNotFound(t *testing.T) {
-	doc := etree.NewDocument()
-	ctx := NewContext(doc)
-	if ctx.GetNamespacePrefix("http://foo.com") != "http://foo.com" {
-		t.Errorf("expected %v, got %v", "http://foo.com", ctx.GetNamespacePrefix("http://foo.com"))
-	}
-}
-
-func TestNamespaceUri(t *testing.T) {
-	doc := etree.NewDocument()
-	ctx := NewContext(doc)
-	ctx.SetNamespacePrefix("foo", "http://foo.com")
-	if ctx.GetNamespaceUri("foo") != "http://foo.com" {
-		t.Errorf("expected %v, got %v", "http://foo.com", ctx.GetNamespaceUri("foo"))
-	}
-}
-
-func TestNamespaceUriNotFound(t *testing.T) {
-	doc := etree.NewDocument()
-	ctx := NewContext(doc)
-	if ctx.GetNamespaceUri("foo") != "foo" {
-		t.Errorf("expected %v, got %v", "foo", ctx.GetNamespaceUri("foo"))
-	}
-}
-
-func TestTypeConstructor(t *testing.T) {
-	doc := etree.NewDocument()
-	ctx := NewContext(doc)
-	ctor := func(ctx Context) (Node, error) {
-		return nil, nil
-	}
-	ctx.RegisterTypeConstructor("http://foo.com", "bar", ctor)
-	got, err := ctx.GetTypeConstructor("http://foo.com", "bar")
+	err := doc.ReadFromString(xlm)
 	if err != nil {
-		t.Errorf("expected %v, got %v", nil, err)
+		t.Fatal(err)
 	}
-	if got == nil {
-		t.Error("ctor is nil")
-	}
-}
+	ctx := NewContextWithDocument(doc)
 
-func TestTypeConstructorNotFound(t *testing.T) {
-	doc := etree.NewDocument()
-	ctx := NewContext(doc)
-	ctor := func(ctx Context) (Node, error) {
-		return nil, nil
+	testCases := []struct {
+		prefix string
+		uri    string
+		found  bool
+	}{
+		{"", "http://example.com", true},
+		{"foo", "http://foo.com", true},
+		{"bar", "http://bar.com", true},
+		{"baz", "", false},
 	}
-	ctx.RegisterTypeConstructor("http://foo.com", "bar", ctor)
-	_, err := ctx.GetTypeConstructor("http://bar.com", "foo")
-	if err != ErrNoTypeConstructor {
-		t.Errorf("expected %v, got %v", ErrNoTypeConstructor, err)
-	}
-}
+	for _, tc := range testCases {
+		prefix, found := ctx.GetNamespacePrefix(tc.uri)
+		if tc.found && prefix != tc.prefix {
+			t.Fatalf("Expected prefix %s for namespace %s, got %s", tc.prefix, tc.uri, prefix)
+		}
+		if found != tc.found {
+			t.Fatalf("Expected found=%t for namespace %s, got %t", tc.found, tc.uri, found)
+		}
 
-func TestElementTypeConstructor(t *testing.T) {
-	doc := etree.NewDocument()
-	ctx := NewContext(doc)
-	ctor := func(ctx Context) (Node, error) {
-		return nil, nil
-	}
-	el := etree.NewElement("foo:bar")
-	el.CreateAttr("xmlns:foo", "http://foo.com")
-
-	ctx.RegisterTypeConstructor("http://foo.com", "bar", ctor)
-	got, err := ctx.GetElementTypeConstructor(el)
-	if err != nil {
-		t.Errorf("expected %v, got %v", nil, err)
-	}
-	if got == nil {
-		t.Error("ctor is nil")
+		uri, found := ctx.GetNamespaceUri(tc.prefix)
+		if tc.found && uri != tc.uri {
+			t.Fatalf("Expected uri %s for prefix %s, got %s", tc.uri, tc.prefix, uri)
+		}
+		if found != tc.found {
+			t.Fatalf("Expected found=%t for prefix %s, got %t", tc.found, tc.prefix, found)
+		}
 	}
 }

@@ -14,9 +14,10 @@ type XmlTypeConstructor func(ctx Context) (Node, error)
 
 type Context interface {
 	GetDocument() *etree.Document
+	WriteToString() (string, error)
 	SetNamespacePrefix(prefix string, uri string)
-	GetNamespacePrefix(uri string) string
-	GetNamespaceUri(prefix string) string
+	GetNamespacePrefix(uri string) (string, bool)
+	GetNamespaceUri(prefix string) (string, bool)
 	RegisterTypeConstructor(uri string, tag string, ctor XmlTypeConstructor)
 	GetTypeConstructor(uri string, tag string) (XmlTypeConstructor, error)
 	GetElementTypeConstructor(el *etree.Element) (XmlTypeConstructor, error)
@@ -35,17 +36,29 @@ type xmlTypeEntry struct {
 	constructor XmlTypeConstructor
 }
 
-func NewContext(doc *etree.Document) Context {
-	return &context{
+func NewContext() Context {
+	return NewContextWithDocument(etree.NewDocument())
+}
+
+func NewContextWithDocument(doc *etree.Document) Context {
+	ctx := &context{
 		doc:              doc,
 		uris:             make(map[string]string),
 		prefixes:         make(map[string]string),
 		typeConstructors: make([]*xmlTypeEntry, 0),
 	}
+	ctx.loadNametable(doc.Root())
+
+	return ctx
 }
 
 func (ctx *context) GetDocument() *etree.Document {
 	return ctx.doc
+}
+
+func (ctx *context) WriteToString() (string, error) {
+	ctx.writeNametable(ctx.doc.Root())
+	return ctx.doc.WriteToString()
 }
 
 func (ctx *context) SetNamespacePrefix(prefix string, uri string) {
@@ -53,20 +66,20 @@ func (ctx *context) SetNamespacePrefix(prefix string, uri string) {
 	ctx.uris[prefix] = uri
 }
 
-func (ctx *context) GetNamespacePrefix(uri string) string {
+func (ctx *context) GetNamespacePrefix(uri string) (string, bool) {
 	prefix, found := ctx.prefixes[uri]
 	if !found {
-		return uri
+		return "", false
 	}
-	return prefix
+	return prefix, true
 }
 
-func (ctx *context) GetNamespaceUri(prefix string) string {
+func (ctx *context) GetNamespaceUri(prefix string) (string, bool) {
 	namespaceUri, found := ctx.uris[prefix]
 	if !found {
-		return prefix
+		return "", false
 	}
-	return namespaceUri
+	return namespaceUri, true
 }
 
 func (ctx *context) RegisterTypeConstructor(uri string, tag string, ctor XmlTypeConstructor) {
@@ -100,4 +113,36 @@ func (ctx *context) getTypeConstructor(uri string, tag string) (*xmlTypeEntry, b
 		}
 	}
 	return nil, false
+}
+
+func (ctx *context) loadNametable(el *etree.Element) {
+	if el == nil {
+		return
+	}
+	for _, attr := range el.Attr {
+		if attr.Space == "xmlns" {
+			ctx.SetNamespacePrefix(attr.Key, attr.Value)
+		}
+		if attr.Space == "" && attr.Key == "xmlns" {
+			ctx.SetNamespacePrefix("", attr.Value)
+		}
+	}
+
+	for _, child := range el.ChildElements() {
+		ctx.loadNametable(child)
+	}
+}
+
+func (ctx *context) writeNametable(el *etree.Element) {
+	if el == nil {
+		return
+	}
+	for prefix, uri := range ctx.uris {
+		if prefix == "" {
+			el.CreateAttr("xmlns", uri)
+		} else {
+			el.CreateAttr("xmlns:"+prefix, uri)
+		}
+	}
+	el.SortAttrs()
 }
